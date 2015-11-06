@@ -1,13 +1,51 @@
 (in-package :edu.case.acm-people.jkp46.graph)
 
-;; Base class for adjacency list
+;;; *** Base class for GRAPH
+    ; Defaults as object oriented Adjacency list implementation
 (defclass graph ()
   ((adjlist
     :accessor graph-al
     :initarg :adjlist
     :initform NIL)))
 
-;; For an object oriented approach
+(defgeneric get-neighbors (graph node)
+  (:documentation "get all the neighbors of node 'node'"))
+ 
+(defgeneric show-graph (graph)
+  (:documentation "print the graph in an ugly format")) 
+
+(defgeneric add-vertex (graph name &optional neighbors)
+  (:documentation "add the named vertex to the graph. Neighbors MUST be passed as a list")) 
+
+(defgeneric add-edge (graph v1 v2)
+  (:documentation "add an edge between the two vertices")) 
+
+;;; *** For a association-list (ALIST) based approach
+(defclass list-graph (graph) ())
+
+(defmethod get-neighbors ((mygraph list-graph) node)
+  (with-accessors ((adjlist graph-al)) mygraph
+    (cadr (assoc node adjlist :test #'equal))))
+ 
+(defmethod show-graph ((mygraph list-graph))
+  (with-accessors ((adjlist graph-al)) mygraph
+    (dolist (v adjlist)
+      (format t "~a -> ~a~%"
+          (car v)
+          (cadr v)))))
+
+(defmethod add-vertex ((mygraph list-graph) name &optional neighbors)
+  (if (not (typep neighbors 'list)) (error "Please pass the neighbors as a list"))
+  (with-accessors ((adjlist graph-al)) mygraph
+    (push (cons name (cons neighbors nil)) adjlist)))
+
+(defmethod add-edge ((mygraph list-graph) v1 v2)
+  (with-accessors ((adjlist graph-al)) mygraph
+    (push v2 (cadr (assoc v1 adjlist :test #'equal)))
+    (values mygraph)))
+ 
+;;; ***  For an OBJECT oriented approach
+;; Vertex class
 (defclass vertex ()
   ((name
     :accessor vname
@@ -18,13 +56,7 @@
     :initarg :neighbors
     :initform NIL)))
 
-;; For a association-list based approach
-(defclass list-graph (graph) ())
-
-(defgeneric get-neighbors (graph node)
-  (:documentation "get all the neighbors of node 'node'"))
-
-;; determines if the vertex is named 'node'
+;; Utility function determines if the given vertex has name <node>
 (defun is-namep (node vertex)
   (equal (vname vertex) node))
 
@@ -32,32 +64,15 @@
   (with-accessors ((adjlist graph-al)) mygraph
     (vneighbors
      (find node adjlist :test
-	   #'is-namep))))
-
-(defmethod get-neighbors ((mygraph list-graph) node)
-  (with-accessors ((adjlist graph-al)) mygraph
-    (cadr (assoc node adjlist :test #'equal))))
-
-(defgeneric show-graph (graph)
-  (:documentation "print the graph in an ugly format"))
+       #'is-namep))))
 
 (defmethod show-graph ((mygraph graph))
   (with-accessors ((adjlist graph-al)) mygraph
     (loop
        for v in adjlist
        do (format t "~a -> ~a~%"
-		  (vname v)
-		  (vneighbors v)))))
-
-(defmethod show-graph ((mygraph list-graph))
-  (with-accessors ((adjlist graph-al)) mygraph
-    (dolist (v adjlist)
-      (format t "~a -> ~a~%"
-	      (car v)
-	      (cadr v)))))
-
-(defgeneric add-vertex (graph name &optional neighbors)
-  (:documentation "add the named vertex to the graph. Neighbors MUST be passed as a list"))
+          (vname v)
+          (vneighbors v)))))
 
 (defmethod add-vertex ((mygraph graph) name &optional neighbors)
   (if (not (typep neighbors 'list))
@@ -66,21 +81,7 @@
       (push (make-instance 'vertex :name name :neighbors neighbors) adjlist))
     (values mygraph))
 
-(defmethod add-vertex ((mygraph list-graph) name &optional neighbors)
-  (if (not (typep neighbors 'list)) (error "Please pass the neighbors as a list"))
-  (with-accessors ((adjlist graph-al)) mygraph
-    (push (cons name (cons neighbors nil)) adjlist)))
-
-(defgeneric add-edge (graph v1 v2)
-  (:documentation "add an edge between the two vertices"))
-
-(defmethod add-edge ((mygraph list-graph) v1 v2)
-  (with-accessors ((adjlist graph-al)) mygraph
-    (push v2 (cadr (assoc v1 adjlist :test #'equal)))
-    (values mygraph)))
-
-;; TODO : make this work - currently won't modify the object in-place
 (defmethod add-edge ((mygraph graph) v1 v2)
   (with-accessors ((adjlist graph-al)) mygraph
-    (push (vneighbors (car (member v1 adjlist :test #'is-namep)))
-	  v2))) 
+    (nconc (vneighbors (car (member v1 adjlist :test #'is-namep)))
+           v2)))

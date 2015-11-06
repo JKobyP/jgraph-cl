@@ -1,17 +1,8 @@
 ;;;; Unit testing harness for the graph-library
-;;; To operate, execute (in-package :lisp-unit)
-;;; to set the repl's *package* variable, compile
-;;; the graph package (with C-c-k) and then compile
-;;; the testing harness. Run all tests with (run-tests).
+;; To operate, first load compile.lisp, then load
+;; test.lisp
 
-;; Loading librarties and setting up environment
-;(ql:quickload :lisp-unit)
-;(defparameter old-package *package*)
-;(defun leave ()
-;  (setf *package* old-package))
-;(load "graph.lisp")
 (in-package :edu.case.acm-people.jkp46.graph)
-;(in-package :lisp-unit)
 
 ;; ========== Testing utilities ===========
 (defparameter *gtype* 'graph)
@@ -21,14 +12,14 @@
 
 ;; ========== Test definitions ==========
 (define-test test-create-graph
-  (assert-true (make-instance 'graph)))
+  (assert-true (make-instance *gtype*)))
 
 (define-test test-add-vertex
   (clean)
   (assert-equal
    "hi" (progn
-	  (add-vertex *g* "hi" nil)
-	  (vname (first (graph-al *g*))))))
+      (add-vertex *g* "hi" nil)
+      (vname (first (graph-al *g*))))))
 
 (define-test test-add-vertex-returns-type-graph
   (clean)
