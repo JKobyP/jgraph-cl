@@ -1,6 +1,9 @@
 (in-package :edu.case.acm-people.jkp46.graph)
 
-;;; *** Base class for GRAPH
+; TODO : reorganize object hierarchy and think about inheritance/polymorphism
+;;; *** Utilities ****************************************************
+
+;;; *** Base class for GRAPH *****************************************
     ; Defaults as object oriented Adjacency list implementation
 (defclass graph ()
   ((adjlist
@@ -14,19 +17,20 @@
 (defgeneric show-graph (graph)
   (:documentation "print the graph in an ugly format")) 
 
-; TODO: disable repeated additions
-; TODO: limit valid names to symbol-type
 (defgeneric add-vertex (graph name &optional neighbors)
-  (:documentation "add the named vertex to the graph. Neighbors MUST be passed as a list")) 
+  (:documentation "add the named vertex to the graph if \
+                   one of the same name does not already exist. \
+                   Neighbors MUST be passed as a list, \
+                   name must be a symbol."))
 
 (defgeneric add-edge (graph v1 v2)
-  (:documentation "add an edge between the two vertices")) 
+  (:documentation "add a directed edge from v1 to v2")) 
 
-; TODO: Implement removing references to the vertex
+; TODO: Implement removing edges to the vertex
 (defgeneric remove-vertex (graph name)
   (:documentation "remove a vertex from graph by name"))
 
-;;; *** For a association-list (ALIST) based approach
+;;; *** For a association-list (ALIST) based approach ****************
 (defclass list-graph (graph) ())
 
 (defmethod get-neighbors ((mygraph list-graph) node)
@@ -41,10 +45,12 @@
           (cadr v)))))
 
 (defmethod add-vertex ((mygraph list-graph) name &optional neighbors)
-  (if (not (typep neighbors 'list)) (error "Please pass the neighbors as a list"))
+  (check-type neighbors list)
+  (check-type name symbol)
   (with-accessors ((adjlist graph-al)) mygraph
-    (push (cons name (cons neighbors nil)) adjlist)
-    ( values mygraph)))
+    (if (not (find name adjlist :test #'is-namep))
+         (push (cons name (cons neighbors nil)) adjlist))
+    (values mygraph)))
 
 (defmethod add-edge ((mygraph list-graph) v1 v2)
   (with-accessors ((adjlist graph-al)) mygraph
@@ -55,7 +61,7 @@
   (with-accessors ((adjlist graph-al)) mygraph
     (setf adjlist (delete (assoc to-destroy adjlist) adjlist))))
 
-;;; ***  For an OBJECT oriented approach
+;;; ***  For an OBJECT oriented approach ******************************
 ; TODO: Implement pointer-based system with 
 ;       the proper AST specs (edge-list and node-list)
 ;; Vertex class
@@ -88,11 +94,12 @@
           (vneighbors v)))))
 
 (defmethod add-vertex ((mygraph graph) name &optional neighbors)
-  (if (not (typep neighbors 'list))
-      (error "Please pass the neighbors as a list")) 
-    (with-accessors ((adjlist graph-al)) mygraph
-      (push (make-instance 'vertex :name name :neighbors neighbors) adjlist))
-    (values mygraph))
+  (check-type neighbors list)
+  (check-type name symbol)
+  (with-accessors ((adjlist graph-al)) mygraph
+    (if (not (find name adjlist :test #'is-namep))
+      (push (make-instance 'vertex :name name :neighbors neighbors) adjlist)))
+  (values mygraph))
 
 (defmethod add-edge ((mygraph graph) v1 v2)
   (with-accessors ((adjlist graph-al)) mygraph

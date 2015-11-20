@@ -20,8 +20,8 @@
 (define-test test-add-vertex
   (clean)
   (assert-equal
-   "hi" (progn
-      (add-vertex *g* "hi" nil)
+   'hi (progn
+      (add-vertex *g* 'hi nil)
       (funcall (if (equal *gtype* 'graph)
                  #'vname 
                  #'car) 
@@ -31,22 +31,22 @@
   (clean)
   (assert-equal
    *gtype*
-   (type-of (add-vertex *g* "hi" nil))))
+   (type-of (add-vertex *g* 'hi nil))))
 
 (define-test test-get-neighbors
   (clean)
-  (add-vertex *g* :a '(:b :c))
+  (add-vertex *g* 'a '('b 'c))
   (assert-equal 
-    '(:b :c) 
-    (get-neighbors *g* :a)))
+    '('b 'c) 
+    (get-neighbors *g* 'a)))
 
 (define-test test-add-vertex-with-invalid-neighbors
   (clean)
-  (assert-error 'error (add-vertex *g* "a" "b")))
+  (assert-error 'type-error (add-vertex *g* 'a 'b)))
 
 (define-test test-remove-vertex
   (clean)
-  (add-vertex *g* :a '(:b :c))
-  (remove-vertex *g* :a)
+  (add-vertex *g* 'a '('b 'c))
+  (remove-vertex *g* 'a)
   (assert-false
     (graph-al *g*)))
