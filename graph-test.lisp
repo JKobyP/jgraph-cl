@@ -4,7 +4,8 @@
 
 (in-package :edu.case.acm-people.jkp46.graph)
 ;; ========== Testing utilities ===========
-(defparameter *gtype* 'graph)
+(defparameter *gtype* 'vgraph)
+;(defparameter *gtype* 'list-graph)
 (defparameter *g* (make-instance *gtype*))
 (defun clean ()
   (setf *g* (make-instance *gtype*))) 
@@ -22,7 +23,7 @@
   (assert-equal
    'hi (progn
       (add-vertex *g* 'hi nil)
-      (funcall (if (equal *gtype* 'graph)
+      (funcall (if (equal *gtype* 'vgraph)
                  #'vname 
                  #'car) 
         (first (graph-al *g*))))))

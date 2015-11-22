@@ -1,6 +1,5 @@
 (in-package :edu.case.acm-people.jkp46.graph)
 
-; TODO : reorganize object hierarchy and think about inheritance/polymorphism
 ;;; *** Utilities ****************************************************
 
 ;;; *** Base class for GRAPH *****************************************
@@ -23,8 +22,18 @@
                    Neighbors MUST be passed as a list, \
                    name must be a symbol."))
 
+(defmethod add-vertex :around ((mygraph graph) name &optional neighbors)
+  (check-type neighbors list)
+  (check-type name symbol)
+  (call-next-method)
+  mygraph)
+
 (defgeneric add-edge (graph v1 v2)
   (:documentation "add a directed edge from v1 to v2")) 
+
+(defmethod add-edge :before (graph v1 v2)
+  (check-type v1 symbol)
+  (check-type v2 symbol))
 
 ; TODO: Implement removing edges to the vertex
 (defgeneric remove-vertex (graph name)
@@ -45,25 +54,29 @@
           (cadr v)))))
 
 (defmethod add-vertex ((mygraph list-graph) name &optional neighbors)
-  (check-type neighbors list)
-  (check-type name symbol)
   (with-accessors ((adjlist graph-al)) mygraph
     (if (not (find name adjlist :test #'is-namep))
-         (push (cons name (cons neighbors nil)) adjlist))
-    (values mygraph)))
+      (push (cons name (cons neighbors nil)) adjlist))))
 
 (defmethod add-edge ((mygraph list-graph) v1 v2)
   (with-accessors ((adjlist graph-al)) mygraph
-    (push v2 (cadr (assoc v1 adjlist :test #'equal)))
-    (values mygraph)))
+    (push v2 (cadr (assoc v1 adjlist :test #'equal))))
+  mygraph)
  
 (defmethod remove-vertex ((mygraph list-graph) to-destroy)
   (with-accessors ((adjlist graph-al)) mygraph
     (setf adjlist (delete (assoc to-destroy adjlist) adjlist))))
 
 ;;; ***  For an OBJECT oriented approach ******************************
-; TODO: Implement pointer-based system with 
-;       the proper AST specs (edge-list and node-list)
+
+;; Graph that contains Vertex objects as its primary structure
+;;      The edge-list will remain unimplemented until it is necessary
+(defclass vgraph (graph) 
+  ((edge-list
+     :accessor vg-edge-list
+     :initarg :edge-list
+     :initform NIL)))
+
 ;; Vertex class
 (defclass vertex ()
   ((name
@@ -79,13 +92,13 @@
 (defun is-namep (node-name vertex)
   (equal (vname vertex) node-name))
 
-(defmethod get-neighbors ((mygraph graph) node) 
+(defmethod get-neighbors ((mygraph vgraph) node) 
   (with-accessors ((adjlist graph-al)) mygraph
     (vneighbors
      (find node adjlist :test
        #'is-namep))))
 
-(defmethod show-graph ((mygraph graph))
+(defmethod show-graph ((mygraph vgraph))
   (with-accessors ((adjlist graph-al)) mygraph
     (loop
        for v in adjlist
@@ -93,23 +106,19 @@
           (vname v)
           (vneighbors v)))))
 
-(defmethod add-vertex ((mygraph graph) name &optional neighbors)
-  (check-type neighbors list)
-  (check-type name symbol)
+(defmethod add-vertex ((mygraph vgraph) name &optional neighbors)
   (with-accessors ((adjlist graph-al)) mygraph
     (if (not (find name adjlist :test #'is-namep))
-      (push (make-instance 'vertex :name name :neighbors neighbors) adjlist)))
-  (values mygraph))
+      (push (make-instance 'vertex :name name :neighbors neighbors) adjlist))))
 
-(defmethod add-edge ((mygraph graph) v1 v2)
+(defmethod add-edge ((mygraph vgraph) v1 v2)
   (with-accessors ((adjlist graph-al)) mygraph
     (nconc (vneighbors (car (member v1 adjlist :test #'is-namep)))
            v2)))
 
-(defmethod remove-vertex ((mygraph graph) to-destroy)
+(defmethod remove-vertex ((mygraph vgraph) to-destroy)
   (with-accessors ((adjlist graph-al)) mygraph
-    (setq adjlist 
-          (delete-if 
-            (lambda (current-vertex) ; This is a fun example of currying!
-              (is-namep to-destroy current-vertex)) 
-            adjlist))))
+    (setq adjlist (delete-if
+                    (lambda (current-vertex) ; A fun example of currying!
+                      (is-namep to-destroy current-vertex))
+                    adjlist))))
