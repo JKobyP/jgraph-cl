@@ -1,5 +1,4 @@
 (in-package :edu.case.acm-people.jkp46.graph)
-
 ;;; *** Utilities ****************************************************
 
 ;;; *** Base class for GRAPH *****************************************
@@ -16,17 +15,22 @@
 (defgeneric show-graph (graph)
   (:documentation "print the graph in an ugly format")) 
 
+; TODO: Implement removing edges to the vertex
+(defgeneric remove-vertex (graph name)
+  (:documentation "remove a vertex from graph by name"))
+ 
 (defgeneric add-vertex (graph name &optional neighbors)
   (:documentation "add the named vertex to the graph if \
                    one of the same name does not already exist. \
                    Neighbors MUST be passed as a list, \
                    name must be a symbol."))
 
-(defmethod add-vertex :around ((mygraph graph) name &optional neighbors)
+(defgeneric search-adjlist (graph name)
+  (:documentation "searches for a vertex by name"))
+
+(defmethod add-vertex :before ((mygraph graph) name &optional neighbors)
   (check-type neighbors list)
-  (check-type name symbol)
-  (call-next-method)
-  mygraph)
+  (check-type name symbol))
 
 (defgeneric add-edge (graph v1 v2)
   (:documentation "add a directed edge from v1 to v2")) 
@@ -35,37 +39,27 @@
   (check-type v1 symbol)
   (check-type v2 symbol))
 
-; TODO: Implement removing edges to the vertex
-(defgeneric remove-vertex (graph name)
-  (:documentation "remove a vertex from graph by name"))
+(defgeneric add-vertexc (graph name &optional neighbors)
+  (:documentation "wrapper on add-vertex which returns the graph
+                   for chaining calls."))
 
-;;; *** For a association-list (ALIST) based approach ****************
-(defclass list-graph (graph) ())
+(defmethod add-vertexc ((g graph) name &optional neighbors)
+  (add-vertex g name neighbors)
+  g)
 
-(defmethod get-neighbors ((mygraph list-graph) node)
-  (with-accessors ((adjlist graph-al)) mygraph
-    (cadr (assoc node adjlist :test #'equal))))
- 
-(defmethod show-graph ((mygraph list-graph))
-  (with-accessors ((adjlist graph-al)) mygraph
-    (dolist (v adjlist)
-      (format t "~a -> ~a~%"
-          (car v)
-          (cadr v)))))
+(defgeneric remove-vertexc (graph name)
+  (:documentation "wrapper on remove-vertex which returns the graph
+                   for chaining calls."))
 
-(defmethod add-vertex ((mygraph list-graph) name &optional neighbors)
-  (with-accessors ((adjlist graph-al)) mygraph
-    (if (not (find name adjlist :test #'is-namep))
-      (push (cons name (cons neighbors nil)) adjlist))))
+(defmethod remove-vertexc ((g graph) name)
+  (remove-vertex g name)
+  g)
 
-(defmethod add-edge ((mygraph list-graph) v1 v2)
-  (with-accessors ((adjlist graph-al)) mygraph
-    (push v2 (cadr (assoc v1 adjlist :test #'equal))))
-  mygraph)
- 
-(defmethod remove-vertex ((mygraph list-graph) to-destroy)
-  (with-accessors ((adjlist graph-al)) mygraph
-    (setf adjlist (delete (assoc to-destroy adjlist) adjlist))))
+(defgeneric emptyp (graph)
+  (:documentation "returns true if the graph is empty"))
+
+(defmethod emptyp ((g graph))
+  (not (first (graph-al g))))
 
 ;;; ***  For an OBJECT oriented approach ******************************
 
@@ -88,6 +82,9 @@
     :initarg :neighbors
     :initform NIL)))
 
+(defun make-vertex (name neighbors)
+  (make-instance 'vertex :name name :neighbors neighbors))
+
 ;; Utility function determines if the given vertex has name <node-name>
 (defun is-namep (node-name vertex)
   (equal (vname vertex) node-name))
@@ -99,22 +96,21 @@
        #'is-namep))))
 
 (defmethod show-graph ((mygraph vgraph))
-  (with-accessors ((adjlist graph-al)) mygraph
-    (loop
-       for v in adjlist
-       do (format t "~a -> ~a~%"
-          (vname v)
-          (vneighbors v)))))
+    (dolist (v (graph-al mygraph))
+      (format t "~a -> ~a~%"
+        (vname v)
+        (vneighbors v))))
 
 (defmethod add-vertex ((mygraph vgraph) name &optional neighbors)
-  (with-accessors ((adjlist graph-al)) mygraph
-    (if (not (find name adjlist :test #'is-namep))
-      (push (make-instance 'vertex :name name :neighbors neighbors) adjlist))))
+  (let ((already-exists (search-adjlist mygraph name))
+        (new-vertex (make-vertex name neighbors)))
+    (when (not already-exists)
+        (return-from add-vertex (push new-vertex (graph-al mygraph))))
+    already-exists))
 
 (defmethod add-edge ((mygraph vgraph) v1 v2)
-  (with-accessors ((adjlist graph-al)) mygraph
-    (nconc (vneighbors (car (member v1 adjlist :test #'is-namep)))
-           v2)))
+  (nconc (vneighbors (car (search-adjlist mygraph v1)))
+           v2))
 
 (defmethod remove-vertex ((mygraph vgraph) to-destroy)
   (with-accessors ((adjlist graph-al)) mygraph
@@ -122,3 +118,6 @@
                     (lambda (current-vertex) ; A fun example of currying!
                       (is-namep to-destroy current-vertex))
                     adjlist))))
+
+(defmethod search-adjlist ((g vgraph) key)
+  (member key (graph-al g) :test #'is-namep))

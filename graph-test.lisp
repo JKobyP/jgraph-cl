@@ -20,19 +20,19 @@
 ;; two separate cases for the different graph types.
 (define-test test-add-vertex
   (clean)
+  (add-vertex *g* 'hi nil)
+  (assert-false (emptyp *g*))
   (assert-equal
-   'hi (progn
-      (add-vertex *g* 'hi nil)
-      (funcall (if (equal *gtype* 'vgraph)
+   'hi (funcall (if (equal *gtype* 'vgraph)
                  #'vname 
                  #'car) 
-        (first (graph-al *g*))))))
+        (first (graph-al *g*)))))
 
-(define-test test-add-vertex-returns-type-graph
-  (clean)
-  (assert-equal
-   *gtype*
-   (type-of (add-vertex *g* 'hi nil))))
+;(define-test test-add-vertex-returns-type-graph
+;  (clean)
+;  (assert-equal
+;   *gtype*
+;   (type-of (add-vertex *g* 'hi nil))))
 
 (define-test test-get-neighbors
   (clean)

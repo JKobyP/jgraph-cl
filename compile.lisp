@@ -4,6 +4,8 @@
 
 (compile-file "graph.lisp")
 (load "graph.lisp")
+(compile-file "list-graph.lisp")
+(load "list-graph.lisp")
 
 (compile-file "graph-test.lisp")
 (load "graph-test.lisp")
